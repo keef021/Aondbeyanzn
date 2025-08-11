@@ -1,4 +1,4 @@
-                      BackgroundColor3 = Color3.fromRGB(40, 40, 40),local Libary = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
+local Libary = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
 workspace.FallenPartsDestroyHeight = -math.huge
 
 local Window = Libary:MakeWindow({
@@ -653,4 +653,4 @@ StealTab:AddToggle({
             end
         end
     end
-})                        TextColor3 = Color3.fromRGB(255
+})
