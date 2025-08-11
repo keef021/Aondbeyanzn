@@ -2,7 +2,7 @@ local Libary = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao14
 workspace.FallenPartsDestroyHeight = -math.huge
 
 local Window = Libary:MakeWindow({
-    Title = "Sync Hub | Brookhaven RP ",
+    Title = "Sync Hub | Steal a Driprot",
     SubTitle = "by: Keef",
     LoadText = "Carregando Sync Hub",
     Flags = "ChaosHub_Broookhaven"
@@ -19,7 +19,7 @@ local InfoTab = Window:MakeTab({ Title = "Info", Icon = "rbxassetid://1530913847
 InfoTab:AddSection({ "Informações do Script" })
 InfoTab:AddParagraph({ "Owner / Developer:", "Keef and BN" })
 InfoTab:AddParagraph({ "Colaborações:", "BN" })
-InfoTab:AddParagraph({ "Você está usando:", "Sync Hub Brookhaven " })
+InfoTab:AddParagraph({ "Você está usando:", "Sync Hub Steal a Driprot" })
 InfoTab:AddParagraph({ "Your executor:", executor or "Desconhecido" })
 
 -- Função de Rejoin
