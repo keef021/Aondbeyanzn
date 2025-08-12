@@ -33,7 +33,7 @@ InfoTab:AddButton({
 })
 
 -- Aba Helper
-local HelperTab = Window:MakeTab({ Title = "Helper", Icon = "rbxassetid://139284076376083" })
+local HelperTab = Window:MakeTab({ Title = "Helper", Icon = "rbxassetid://112065172702553" })
 
 -- Noclip
 local noclipConnection
