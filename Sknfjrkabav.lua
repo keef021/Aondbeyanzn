@@ -290,7 +290,7 @@ ESPTab:AddToggle({
 })
 
 -- Aba Steal
-local StealTab = Window:MakeTab({ Title = "Steal", Icon = "rbxassetid://139284076376083" })
+local StealTab = Window:MakeTab({ Title = "Steal", Icon = "rbxassetid://81812366414231" })
 
 local savedBasePosition = nil
 local isTweening = false
