@@ -14,7 +14,7 @@ Window:AddMinimizeButton({
 })
 
 -- Aba Info
-local InfoTab = Window:MakeTab({ Title = "Info", Icon = "rbxassetid://15309138473" })
+local InfoTab = Window:MakeTab({ Title = "Info", Icon = "rbxassetid://77991697673856" })
 
 InfoTab:AddSection({ "Informações do Script" })
 InfoTab:AddParagraph({ "Owner / Developer:", "Keef and BN" })
