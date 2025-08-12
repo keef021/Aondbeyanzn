@@ -148,7 +148,7 @@ HelperTab:AddSlider({
 })
 
 -- Aba ESP
-local ESPTab = Window:MakeTab({ Title = "ESP", Icon = "rbxassetid://87627563993834" })
+local ESPTab = Window:MakeTab({ Title = "Esp", Icon = "rbxassetid://87627563993834" })
 
 -- Função ESP Player
 local espPlayerEnabled = false
