@@ -2,7 +2,7 @@ local Libary = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao14
 workspace.FallenPartsDestroyHeight = -math.huge
 
 local Window = Libary:MakeWindow({
-    Title = "Sync Hub | Steal a Driprot",
+    Title = "Sync Hub | Mini City RP",
     SubTitle = "by: Keef",
     LoadText = "Carregando Sync Hub",
     Flags = "ChaosHub_Broookhaven"
@@ -19,7 +19,7 @@ local InfoTab = Window:MakeTab({ Title = "Info", Icon = "rbxassetid://7799169767
 InfoTab:AddSection({ "Informações do Script" })
 InfoTab:AddParagraph({ "Owner / Developer:", "Keef and BN" })
 InfoTab:AddParagraph({ "Colaborações:", "BN" })
-InfoTab:AddParagraph({ "Você está usando:", "Sync Hub Steal a Driprot" })
+InfoTab:AddParagraph({ "Você está usando:", "Sync Hub Mini City RP" })
 InfoTab:AddParagraph({ "Your executor:", executor or "Desconhecido" })
 
 -- Função de Rejoin
@@ -290,7 +290,7 @@ ESPTab:AddToggle({
 })
 
 -- Aba Steal
-local StealTab = Window:MakeTab({ Title = "Steal", Icon = "rbxassetid://81812366414231" })
+local StealTab = Window:MakeTab({ Title = "Farm", Icon = "rbxassetid://81812366414231" })
 
 local savedBasePosition = nil
 local isTweening = false
