@@ -9,7 +9,7 @@ local Window = Libary:MakeWindow({
 })
 
 Window:AddMinimizeButton({
-    Button = { Image = "rbxassetid://128161889268721", BackgroundTransparency = 0 },
+    Button = { Image = "rbxassetid://128126421568053", BackgroundTransparency = 0 },
     Corner = { CornerRadius = UDim.new(35, 1) },
 })
 
