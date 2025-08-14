@@ -35,59 +35,102 @@ InfoTab:AddButton({
 -- Aba Helper
 local HelperTab = Window:MakeTab({ Title = "Helper", Icon = "rbxassetid://112065172702553" })
 
--- Noclip
+-- Noclip com bypass avançado
 local noclipConnection
+local noclipParts = {}
+
+local function enableNoclip()
+    task.spawn(function()
+        local char = game.Players.LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    noclipParts[part] = part.CanCollide
+                    part.CanCollide = false
+                    
+                    -- Método adicional para alguns anti-cheats
+                    if part.Name ~= "HumanoidRootPart" then
+                        part.Transparency = math.min(part.Transparency + 0.1, 0.9)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function disableNoclip()
+    task.spawn(function()
+        local char = game.Players.LocalPlayer.Character
+        if char then
+            for part, originalState in pairs(noclipParts) do
+                if part and part.Parent then
+                    part.CanCollide = originalState
+                    -- Restaurar transparência
+                    if part.Name ~= "HumanoidRootPart" then
+                        part.Transparency = math.max(part.Transparency - 0.1, 0)
+                    end
+                end
+            end
+            noclipParts = {}
+        end
+    end)
+end
+
 HelperTab:AddToggle({
     Name = "Noclip",
     Default = false,
     Callback = function(state)
         if state then
             noclipConnection = game:GetService("RunService").Stepped:Connect(function()
-                local char = game.Players.LocalPlayer.Character
-                if char then
-                    for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") and part.CanCollide then
-                            part.CanCollide = false
-                        end
-                    end
-                end
+                enableNoclip()
             end)
         else
             if noclipConnection then
                 noclipConnection:Disconnect()
                 noclipConnection = nil
-                
-                -- Reativar colisão quando desligar noclip
-                local char = game.Players.LocalPlayer.Character
-                if char then
-                    for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                            part.CanCollide = true
-                        end
-                    end
-                end
             end
+            disableNoclip()
         end
     end
 })
 
--- Velocidade Configurável
+-- Velocidade Configurável com bypass
 local normalWalkSpeed = 16
 local speedToggleState = false
 local speedSliderValue = 16
+local speedConnection
+
+local function setSpeed(speed)
+    task.spawn(function()
+        local char = game.Players.LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = speed
+                -- Método alternativo para alguns anti-cheats
+                if char:FindFirstChild("HumanoidRootPart") then
+                    char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                end
+            end
+        end
+    end)
+end
 
 HelperTab:AddToggle({
     Name = "Speed",
     Default = false,
     Callback = function(state)
         speedToggleState = state
-        local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            if state then
-                humanoid.WalkSpeed = speedSliderValue
-            else
-                humanoid.WalkSpeed = normalWalkSpeed
+        if state then
+            speedConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                setSpeed(speedSliderValue)
+            end)
+        else
+            if speedConnection then
+                speedConnection:Disconnect()
+                speedConnection = nil
             end
+            setSpeed(normalWalkSpeed)
         end
     end
 })
@@ -109,23 +152,40 @@ HelperTab:AddSlider({
     end
 })
 
--- Pulo Configurável
+-- Pulo Configurável com bypass
 local normalJumpPower = 50
 local jumpToggleState = false
 local jumpSliderValue = 50
+local jumpConnection
+
+local function setJump(power)
+    task.spawn(function()
+        local char = game.Players.LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.JumpPower = power
+                humanoid.JumpHeight = power / 2.5 -- Para alguns jogos que usam JumpHeight
+            end
+        end
+    end)
+end
 
 HelperTab:AddToggle({
     Name = "Jump",
     Default = false,
     Callback = function(state)
         jumpToggleState = state
-        local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            if state then
-                humanoid.JumpPower = jumpSliderValue
-            else
-                humanoid.JumpPower = normalJumpPower
+        if state then
+            jumpConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                setJump(jumpSliderValue)
+            end)
+        else
+            if jumpConnection then
+                jumpConnection:Disconnect()
+                jumpConnection = nil
             end
+            setJump(normalJumpPower)
         end
     end
 })
@@ -231,426 +291,263 @@ ESPTab:AddToggle({
     end
 })
 
--- ESP Base
-local ESPBaseEnabled = false
-local BaseBillboards = {}
+-- ESP Admin
+local ESPAdminEnabled = false
+local AdminBillboards = {}
 
-local function UpdateBaseBillboard(player)
+local function isPlayerAdmin(player)
+    return player:GetRankInGroup(0) >= 100 -- Você pode ajustar este critério
+end
+
+local function UpdateAdminBillboard(player)
     if player == game.Players.LocalPlayer then return end
-    
-    local base = workspace:FindFirstChild(player.Name .. "_Base") or workspace:FindFirstChild(player.Name .. "Base")
-    if not base then return end
+    if not isPlayerAdmin(player) then return end
+    if not player.Character then return end
 
-    if not BaseBillboards[player] then
-        local billboard = Instance.new("BillboardGui", base)
-        billboard.Name = "SyncHubBaseESP"
-        billboard.Size = UDim2.new(0, 150, 0, 50)
+    if not AdminBillboards[player] then
+        local billboard = Instance.new("BillboardGui", player.Character)
+        billboard.Name = "SyncHubAdminESP"
+        billboard.Size = UDim2.new(0, 200, 0, 50)
         billboard.StudsOffset = Vector3.new(0, 5, 0)
         billboard.AlwaysOnTop = true
 
         local label = Instance.new("TextLabel", billboard)
-        label.Name = "BaseLabel"
+        label.Name = "AdminLabel"
         label.Size = UDim2.new(1, 0, 1, 0)
         label.BackgroundTransparency = 1
         label.TextScaled = true
         label.Font = Enum.Font.GothamBold
 
-        BaseBillboards[player] = { Billboard = billboard, Label = label }
+        -- Highlight para admins
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "AdminHighlight"
+        highlight.FillTransparency = 0.7
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
+        highlight.OutlineTransparency = 0
+        highlight.Adornee = player.Character
+        highlight.Parent = player.Character
+
+        AdminBillboards[player] = { Billboard = billboard, Label = label, Highlight = highlight }
     end
 
-    local label = BaseBillboards[player].Label
-    label.Text = player.Name .. "'s Base"
-    label.TextColor3 = Color3.fromRGB(255, 255, 0)
+    local label = AdminBillboards[player].Label
+    label.Text = "⚠️ ADMIN: " .. player.Name .. " ⚠️"
+    label.TextColor3 = Color3.fromRGB(255, 0, 0)
 end
 
 game:GetService("RunService").RenderStepped:Connect(function()
-    if not ESPBaseEnabled then return end
+    if not ESPAdminEnabled then return end
     for _, player in pairs(game.Players:GetPlayers()) do
         if player ~= game.Players.LocalPlayer then
-            UpdateBaseBillboard(player)
+            UpdateAdminBillboard(player)
         end
     end
 end)
 
 ESPTab:AddToggle({
-    Name = "ESP Base",
+    Name = "ESP Admin",
     Default = false,
     Callback = function(state)
-        ESPBaseEnabled = state
+        ESPAdminEnabled = state
 
         if not state then
-            for player, data in pairs(BaseBillboards) do
+            for player, data in pairs(AdminBillboards) do
                 if data.Billboard then 
                     data.Billboard:Destroy() 
                 end
-            end
-            BaseBillboards = {}
-        end
-    end
-})
-
--- Aba Steal
-local StealTab = Window:MakeTab({ Title = "Farm", Icon = "rbxassetid://81812366414231" })
-
-local savedBasePosition = nil
-local isTweening = false
-local tweenNoclipConnection = nil
-
-StealTab:AddButton({
-    Name = "Salvar Base",
-    Callback = function()
-        local player = game.Players.LocalPlayer
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            savedBasePosition = char.HumanoidRootPart.CFrame
-            print("Base salva em:", savedBasePosition)
-            -- Adicionar notificação visual
-            game.StarterGui:SetCore("SendNotification", {
-                Title = "Sync Hub";
-                Text = "Base salva com sucesso!";
-                Duration = 3;
-            })
-        else
-            warn("Personagem não encontrado!")
-        end
-    end
-})
-
-local tweenBaseToggleState = false
-local tweenBaseButtonGui = nil
-
-local function noclipEnable()
-    if tweenNoclipConnection then return end
-    tweenNoclipConnection = game:GetService("RunService").Stepped:Connect(function()
-        local char = game.Players.LocalPlayer.Character
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
+                if data.Highlight and data.Highlight.Parent then
+                    data.Highlight:Destroy()
                 end
             end
+            AdminBillboards = {}
+        end
+    end
+})
+
+-- Aba Farm
+local FarmTab = Window:MakeTab({ Title = "Farm", Icon = "rbxassetid://81812366414231" })
+
+-- Variáveis para Farm Lixeiro
+local Players = game:GetService("Players")
+local PathfindingService = game:GetService("PathfindingService")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local humanoid, hrp
+local coletando = false
+local originalSpeed = 16
+
+-- Função para pegar o lixo mais próximo que esteja disponível
+local function getLixoMaisProximo()
+    local pastaLixos = workspace:FindFirstChild("MapaGeral")
+        and workspace.MapaGeral:FindFirstChild("Gari")
+        and workspace.MapaGeral.Gari:FindFirstChild("Lixos")
+    
+    if not pastaLixos then return nil end
+    
+    local maisProximo, menorDist = nil, math.huge
+    for _, lixo in ipairs(pastaLixos:GetChildren()) do
+        if lixo:IsA("BasePart") and string.find(string.upper(lixo.Name), "LEXOS") then
+            local prompt = lixo:FindFirstChildWhichIsA("ProximityPrompt")
+            if prompt and prompt.Enabled then
+                local dist = (lixo.Position - hrp.Position).Magnitude
+                if dist < menorDist then
+                    menorDist = dist
+                    maisProximo = lixo
+                end
+            end
+        end
+    end
+    return maisProximo
+end
+
+-- Caminhar até o lixo com movimento natural
+local function andarAte(lixo)
+    if not humanoid or not hrp or not lixo or not lixo.Parent then return false end
+    
+    local caminho = PathfindingService:CreatePath({
+        AgentRadius = 2,
+        AgentHeight = 5,
+        AgentCanJump = true,
+        WaypointSpacing = math.random(4, 8) -- Espaçamento variável
+    })
+    
+    local success, error = pcall(function()
+        caminho:ComputeAsync(hrp.Position, lixo.Position)
+    end)
+    
+    if not success or caminho.Status ~= Enum.PathStatus.Success then
+        return false
+    end
+    
+    local waypoints = caminho:GetWaypoints()
+    for i, waypoint in ipairs(waypoints) do
+        if not coletando or not lixo.Parent then return false end
+        
+        local prompt = lixo:FindFirstChildWhichIsA("ProximityPrompt")
+        if not prompt or not prompt.Enabled then
+            return false
+        end
+        
+        humanoid:MoveTo(waypoint.Position)
+        if waypoint.Action == Enum.PathWaypointAction.Jump then
+            -- Delay natural antes do pulo
+            task.wait(math.random(10, 25) / 100)
+            humanoid.Jump = true
+        end
+        
+        local timeoutConnection
+        local moveFinished = false
+        
+        local connection = humanoid.MoveToFinished:Connect(function()
+            moveFinished = true
+        end)
+        
+        -- Timeout variável
+        timeoutConnection = task.delay(math.random(80, 150) / 100, function()
+            moveFinished = true
+        end)
+        
+        repeat 
+            task.wait(math.random(3, 8) / 100) 
+        until moveFinished
+        
+        connection:Disconnect()
+        if timeoutConnection then
+            task.cancel(timeoutConnection)
+        end
+        
+        -- Pequena pausa entre waypoints
+        if i < #waypoints then
+            task.wait(math.random(1, 5) / 100)
+        end
+    end
+    return true
+end
+
+-- Loop principal do farm com bypass
+local function iniciarColeta()
+    coletando = true
+    -- Salvar velocidade original e aumentar gradualmente
+    humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        originalSpeed = humanoid.WalkSpeed
+        -- Aumentar velocidade gradualmente para evitar detecção
+        task.spawn(function()
+            for i = originalSpeed, 35, 2 do
+                if not coletando then break end
+                humanoid.WalkSpeed = i
+                task.wait(0.1)
+            end
+        end)
+    end
+    
+    while coletando do
+        if not player.Character then
+            task.wait(math.random(80, 120) / 100) -- Delay aleatório
+            continue
+        end
+        
+        humanoid = player.Character:FindFirstChild("Humanoid")
+        hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        
+        if not humanoid or not hrp then
+            task.wait(math.random(40, 80) / 100)
+            continue
+        end
+        
+        local lixo = getLixoMaisProximo()
+        if lixo then
+            local sucesso = andarAte(lixo)
+            if sucesso and lixo.Parent and coletando then
+                local prompt = lixo:FindFirstChildWhichIsA("ProximityPrompt")
+                local distancia = (lixo.Position - hrp.Position).Magnitude
+                if prompt and prompt.Enabled and distancia <= prompt.MaxActivationDistance then
+                    -- Delay aleatório antes de coletar
+                    task.wait(math.random(5, 15) / 100)
+                    
+                    -- Método alternativo de ativação
+                    task.spawn(function()
+                        pcall(function()
+                            fireproximityprompt(prompt)
+                        end)
+                    end)
+                    
+                    task.wait(math.random(8, 20) / 100)
+                end
+            end
+        else
+            task.wait(math.random(15, 35) / 100)
+        end
+        task.wait(math.random(3, 12) / 100) -- Delay variável entre ações
+    end
+end
+
+local function pararColeta()
+    coletando = false
+    -- Restaurar velocidade gradualmente
+    task.spawn(function()
+        humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            local currentSpeed = humanoid.WalkSpeed
+            for i = currentSpeed, originalSpeed, -2 do
+                humanoid.WalkSpeed = math.max(i, originalSpeed)
+                task.wait(0.1)
+                if i <= originalSpeed then break end
+            end
+            humanoid.WalkSpeed = originalSpeed
         end
     end)
 end
 
-local function noclipDisable()
-    if tweenNoclipConnection then
-        tweenNoclipConnection:Disconnect()
-        tweenNoclipConnection = nil
-    end
-end
-
-local function TweenToBase()
-    if not savedBasePosition then
-        warn("Nenhuma base salva! Use 'Salvar Base' primeiro.")
-        game.StarterGui:SetCore("SendNotification", {
-            Title = "Sync Hub";
-            Text = "Salve uma base primeiro!";
-            Duration = 3;
-        })
-        return
-    end
-    if isTweening then 
-        warn("Já está fazendo tween!")
-        return 
-    end
-    
-    isTweening = true
-
-    local player = game.Players.LocalPlayer
-    local char = player.Character
-    if not char then
-        isTweening = false
-        return
-    end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then
-        isTweening = false
-        return
-    end
-
-    noclipEnable()
-    local tweenService = game:GetService("TweenService")
-
-    local basePos = savedBasePosition.Position
-    local flyHeight = 50
-    local currentPos = hrp.Position
-
-    -- Tween para cima
-    local upTweenTime = math.clamp((flyHeight + math.abs(currentPos.Y - basePos.Y)) / 50, 0.5, 5)
-    local upTweenInfo = TweenInfo.new(upTweenTime, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    local upTween = tweenService:Create(hrp, upTweenInfo, {CFrame = CFrame.new(currentPos.X, basePos.Y + flyHeight, currentPos.Z)})
-    upTween:Play()
-    upTween.Completed:Wait()
-
-    -- Tween horizontal
-    local horizDistance = (Vector3.new(currentPos.X, 0, currentPos.Z) - Vector3.new(basePos.X, 0, basePos.Z)).Magnitude
-    local horizTweenTime = math.clamp(horizDistance / 60, 0.5, 8)
-    local horizTweenInfo = TweenInfo.new(horizTweenTime, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-    local horizTween = tweenService:Create(hrp, horizTweenInfo, {CFrame = CFrame.new(basePos.X, basePos.Y + flyHeight, basePos.Z)})
-    horizTween:Play()
-    horizTween.Completed:Wait()
-
-    -- Tween para baixo
-    local downTweenTime = math.clamp(flyHeight / 40, 0.5, 3)
-    local downTweenInfo = TweenInfo.new(downTweenTime, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-    local downTween = tweenService:Create(hrp, downTweenInfo, {CFrame = savedBasePosition})
-    downTween:Play()
-    downTween.Completed:Wait()
-
-    wait(0.5)
-    noclipDisable()
-    isTweening = false
-end
-
-StealTab:AddToggle({
-    Name = "Tween Base",
+FarmTab:AddToggle({
+    Name = "Farm Lixeiro",
     Default = false,
     Callback = function(state)
-        tweenBaseToggleState = state
         if state then
-            if tweenBaseButtonGui == nil then
-                -- Criar GUI do botão
-                tweenBaseButtonGui = Instance.new("ScreenGui")
-                tweenBaseButtonGui.Name = "SyncHubTweenBaseGui"
-                tweenBaseButtonGui.ResetOnSpawn = false
-                tweenBaseButtonGui.Parent = game.CoreGui
-
-                -- Container principal do botão (aumentado para acomodar o botão Quit)
-                local buttonContainer = Instance.new("Frame")
-                buttonContainer.Size = UDim2.new(0, 180, 0, 100)
-                buttonContainer.Position = UDim2.new(0.5, -90, 0.3, -50)
-                buttonContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-                buttonContainer.BorderSizePixel = 0
-                buttonContainer.Parent = tweenBaseButtonGui
-                buttonContainer.Active = true
-
-                -- Bordas arredondadas para container
-                local containerCorner = Instance.new("UICorner")
-                containerCorner.CornerRadius = UDim.new(0, 15)
-                containerCorner.Parent = buttonContainer
-
-                -- Gradiente de fundo
-                local gradient = Instance.new("UIGradient")
-                gradient.Color = ColorSequence.new{
-                    ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 40, 40)),
-                    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 10))
-                }
-                gradient.Rotation = 45
-                gradient.Parent = buttonContainer
-
-                -- Borda do container
-                local stroke = Instance.new("UIStroke")
-                stroke.Color = Color3.fromRGB(255, 255, 255)
-                stroke.Thickness = 1
-                stroke.Transparency = 0.8
-                stroke.Parent = buttonContainer
-
-                -- Título
-                local titleLabel = Instance.new("TextLabel")
-                titleLabel.Size = UDim2.new(1, 0, 0.4, 0)
-                titleLabel.Position = UDim2.new(0, 0, 0, 0)
-                titleLabel.BackgroundTransparency = 1
-                titleLabel.Text = "SYNC HUB"
-                titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                titleLabel.Font = Enum.Font.GothamBold
-                titleLabel.TextScaled = true
-                titleLabel.Parent = buttonContainer
-
-                -- Botão principal (reajustado)
-                local tweenButton = Instance.new("TextButton")
-                tweenButton.Size = UDim2.new(0.9, 0, 0.35, 0)
-                tweenButton.Position = UDim2.new(0.05, 0, 0.35, 0)
-                tweenButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                tweenButton.BorderSizePixel = 0
-                tweenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                tweenButton.Font = Enum.Font.Gotham
-                tweenButton.TextSize = 14
-                tweenButton.Text = "TWEEN BASE"
-                tweenButton.AutoButtonColor = false
-                tweenButton.Parent = buttonContainer
-
-                -- Bordas arredondadas do botão
-                local buttonCorner = Instance.new("UICorner")
-                buttonCorner.CornerRadius = UDim.new(0, 8)
-                buttonCorner.Parent = tweenButton
-
-                -- Borda do botão
-                local buttonStroke = Instance.new("UIStroke")
-                buttonStroke.Color = Color3.fromRGB(255, 255, 255)
-                buttonStroke.Thickness = 1
-                buttonStroke.Transparency = 0.5
-                buttonStroke.Parent = tweenButton
-
-                -- Botão Quit
-                local quitButton = Instance.new("TextButton")
-                quitButton.Size = UDim2.new(0.9, 0, 0.25, 0)
-                quitButton.Position = UDim2.new(0.05, 0, 0.72, 0)
-                quitButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-                quitButton.BorderSizePixel = 0
-                quitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                quitButton.Font = Enum.Font.Gotham
-                quitButton.TextSize = 12
-                quitButton.Text = "QUIT"
-                quitButton.AutoButtonColor = false
-                quitButton.Parent = buttonContainer
-
-                -- Bordas arredondadas do botão quit
-                local quitCorner = Instance.new("UICorner")
-                quitCorner.CornerRadius = UDim.new(0, 6)
-                quitCorner.Parent = quitButton
-
-                -- Borda do botão quit
-                local quitStroke = Instance.new("UIStroke")
-                quitStroke.Color = Color3.fromRGB(255, 100, 100)
-                quitStroke.Thickness = 1
-                quitStroke.Transparency = 0.7
-                quitStroke.Parent = quitButton
-
-                -- Efeitos de hover para botão Tween
-                local tweenService = game:GetService("TweenService")
-                local hoverInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                
-                tweenButton.MouseEnter:Connect(function()
-                    local hoverTween = tweenService:Create(tweenButton, hoverInfo, {
-                        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-                        TextColor3 = Color3.fromRGB(200, 200, 200)
-                    })
-                    local strokeTween = tweenService:Create(buttonStroke, hoverInfo, {
-                        Transparency = 0.2
-                    })
-                    hoverTween:Play()
-                    strokeTween:Play()
-                end)
-                
-                tweenButton.MouseLeave:Connect(function()
-                    local unhoverTween = tweenService:Create(tweenButton, hoverInfo, {
-                        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-                        TextColor3 = Color3.fromRGB(255, 255, 255)
-                    })
-                    local strokeTween = tweenService:Create(buttonStroke, hoverInfo, {
-                        Transparency = 0.5
-                    })
-                    unhoverTween:Play()
-                    strokeTween:Play()
-                end)
-
-                -- Efeitos de hover para botão Quit
-                quitButton.MouseEnter:Connect(function()
-                    local hoverTween = tweenService:Create(quitButton, hoverInfo, {
-                        BackgroundColor3 = Color3.fromRGB(60, 20, 20),
-                        TextColor3 = Color3.fromRGB(255, 150, 150)
-                    })
-                    local strokeTween = tweenService:Create(quitStroke, hoverInfo, {
-                        Transparency = 0.3
-                    })
-                    hoverTween:Play()
-                    strokeTween:Play()
-                end)
-                
-                quitButton.MouseLeave:Connect(function()
-                    local unhoverTween = tweenService:Create(quitButton, hoverInfo, {
-                        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-                        TextColor3 = Color3.fromRGB(255, 255, 255)
-                    })
-                    local strokeTween = tweenService:Create(quitStroke, hoverInfo, {
-                        Transparency = 0.7
-                    })
-                    unhoverTween:Play()
-                    strokeTween:Play()
-                end)
-
-                -- Sistema de arrastar corrigido (compatível com mobile)
-                local UserInputService = game:GetService("UserInputService")
-                local dragging = false
-                local dragStart = nil
-                local startPos = nil
-                local dragConnection = nil
-
-                -- Função para iniciar o drag
-                local function startDragging(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        dragging = true
-                        dragStart = input.Position
-                        startPos = buttonContainer.Position
-                        
-                        if dragConnection then
-                            dragConnection:Disconnect()
-                        end
-                        
-                        dragConnection = UserInputService.InputChanged:Connect(function(input2)
-                            if dragging and (input2.UserInputType == Enum.UserInputType.MouseMovement or input2.UserInputType == Enum.UserInputType.Touch) then
-                                local delta = input2.Position - dragStart
-                                local newX = math.clamp(startPos.X.Offset + delta.X, 0, workspace.CurrentCamera.ViewportSize.X - buttonContainer.AbsoluteSize.X)
-                                local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, workspace.CurrentCamera.ViewportSize.Y - buttonContainer.AbsoluteSize.Y)
-                                
-                                buttonContainer.Position = UDim2.new(0, newX, 0, newY)
-                            end
-                        end)
-                    end
-                end
-
-                -- Função para parar o drag
-                local function stopDragging(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        dragging = false
-                        if dragConnection then
-                            dragConnection:Disconnect()
-                            dragConnection = nil
-                        end
-                    end
-                end
-
-                -- Fazer o título arrastável (compatível com mobile)
-                titleLabel.InputBegan:Connect(startDragging)
-                titleLabel.InputEnded:Connect(stopDragging)
-
-                -- Adicionar cursor pointer no título para indicar que é arrastável
-                titleLabel.MouseEnter:Connect(function()
-                    titleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-                end)
-                
-                titleLabel.MouseLeave:Connect(function()
-                    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                end)
-
-                -- Ação do botão Tween Base
-                tweenButton.MouseButton1Click:Connect(function()
-                    if not isTweening then
-                        -- Efeito visual de clique
-                        local clickTween = tweenService:Create(tweenButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
-                            BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                        })
-                        clickTween:Play()
-                        clickTween.Completed:Wait()
-                        
-                        local unclickTween = tweenService:Create(tweenButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
-                            BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                        })
-                        unclickTween:Play()
-                        
-                        TweenToBase()
-                    end
-                end)
-
-                -- Ação do botão Quit
-                quitButton.MouseButton1Click:Connect(function()
-                    -- Efeito visual de clique
-                    local clickTween = tweenService:Create(quitButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
-                        BackgroundColor3 = Color3.fromRGB(80, 40, 40)
-                    })
-                    clickTween:Play()
-                    clickTween.Completed:Wait()
-                    
-                    -- Sair do jogo
-                    game:Shutdown()
-                end)
-            end
+            task.spawn(iniciarColeta)
         else
-            if tweenBaseButtonGui then
-                tweenBaseButtonGui:Destroy()
-                tweenBaseButtonGui = nil
-            end
+            pararColeta()
         end
     end
 })
