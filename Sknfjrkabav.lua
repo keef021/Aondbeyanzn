@@ -1,6 +1,12 @@
 local Libary = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
 workspace.FallenPartsDestroyHeight = -math.huge
 
+-- Detectar se é mobile
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
 local Window = Libary:MakeWindow({
     Title = "Sync Hub | Mini City RP",
     SubTitle = "by: Keef",
@@ -149,6 +155,26 @@ local legitCamera = workspace.CurrentCamera
 
 -- Função para obter jogador mais próximo
 local function getClosestPlayer()
+    local localPlayer = Players.LocalPlayer
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (player.Character.HumanoidRootPart.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
+            
+            if distance < aimBotFOV and distance < shortestDistance then
+                closestPlayer = player
+                shortestDistance = distance
+            end
+        end
+    end
+    
+    return closestPlayer
+end
+
+-- Função para obter jogador mais próximo no FOV
+local function getClosestPlayerInFOV()
     local localPlayer = Players.LocalPlayer
     local closestPlayer = nil
     local shortestDistance = math.huge
@@ -320,141 +346,6 @@ LegitTab:AddSlider({
     Default = 50,
     Callback = function(value)
         walkSpeed = value
-    end
-})
-
--- Silent Aim para PC e Mobile
-local silentAimEnabled = false
-local silentAimFOV = 50
-local silentAimConnection
-
-LegitTab:AddSection({ "Silent Aim" })
-
-if isMobile then
-    LegitTab:AddParagraph({ "Versão Mobile:", "Usa Pseudo-Silent Aim (mais discreto)" })
-else
-    LegitTab:AddParagraph({ "Versão PC:", "Usa hookmetamethod tradicional" })
-end
-
-LegitTab:AddToggle({
-    Name = "Silent Aim",
-    Default = false,
-    Callback = function(state)
-        silentAimEnabled = state
-        
-        if state then
-            if isMobile then
-                -- Versão Mobile: Pseudo-Silent Aim
-                silentAimConnection = RunService.Heartbeat:Connect(function()
-                    if not silentAimEnabled then return end
-                    
-                    local target = getClosestPlayerInFOV()
-                    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                        local targetPart = target.Character.HumanoidRootPart
-                        local targetPosition = targetPart.Position + Vector3.new(0, 1, 0)
-                        
-                        -- Verificar se está "atirando" (tocando na tela)
-                        local touching = false
-                        for _, touch in pairs(UserInputService:GetTouchesInProgress()) do
-                            touching = true
-                            break
-                        end
-                        
-                        if touching then
-                            -- Aplicar aim instantâneo durante o toque
-                            local currentCFrame = legitCamera.CFrame
-                            local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPosition)
-                            
-                            pcall(function()
-                                legitCamera.CFrame = targetCFrame
-                            end)
-                            
-                            task.wait(0.05) -- Manter por um frame
-                            
-                            -- Voltar suavemente
-                            task.spawn(function()
-                                pcall(function()
-                                    local returnCFrame = currentCFrame:Lerp(legitCamera.CFrame, 0.3)
-                                    legitCamera.CFrame = returnCFrame
-                                end)
-                            end)
-                        end
-                    end
-                end)
-            else
-                -- Versão PC: Silent Aim tradicional
-                pcall(function()
-                    local success = false
-                    
-                    -- Tentar hookmetamethod primeiro
-                    success = pcall(function()
-                        local originalNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-                            local method = getnamecallmethod()
-                            local args = {...}
-                            
-                            if method == "Raycast" and silentAimEnabled then
-                                local target = getClosestPlayerInFOV()
-                                if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                                    local targetPosition = target.Character.HumanoidRootPart.Position + Vector3.new(0, 1, 0)
-                                    local direction = (targetPosition - legitCamera.CFrame.Position).Unit * 1000
-                                    args[2] = direction
-                                end
-                            end
-                            
-                            return originalNamecall(self, unpack(args))
-                        end)
-                    end)
-                    
-                    -- Se hookmetamethod falhar, usar método alternativo
-                    if not success then
-                        silentAimConnection = RunService.Heartbeat:Connect(function()
-                            if not silentAimEnabled then return end
-                            
-                            local target = getClosestPlayerInFOV()
-                            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                                local targetPart = target.Character.HumanoidRootPart
-                                local targetPosition = targetPart.Position + Vector3.new(0, 1, 0)
-                                
-                                -- Verificar se está clicando
-                                if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-                                    local currentCFrame = legitCamera.CFrame
-                                    local targetCFrame = CFrame.lookAt(currentCFrame.Position, targetPosition)
-                                    
-                                    pcall(function()
-                                        legitCamera.CFrame = targetCFrame
-                                    end)
-                                    
-                                    task.wait(0.03)
-                                    
-                                    -- Voltar suavemente
-                                    task.spawn(function()
-                                        pcall(function()
-                                            local returnCFrame = currentCFrame:Lerp(legitCamera.CFrame, 0.4)
-                                            legitCamera.CFrame = returnCFrame
-                                        end)
-                                    end)
-                                end
-                            end
-                        end)
-                    end
-                end)
-            end
-        else
-            if silentAimConnection then
-                silentAimConnection:Disconnect()
-                silentAimConnection = nil
-            end
-        end
-    end
-})
-
-LegitTab:AddSlider({
-    Name = "FOV Silent Aim",
-    Min = 10,
-    Max = 180,
-    Default = 50,
-    Callback = function(value)
-        silentAimFOV = value
     end
 })
 
@@ -1060,6 +951,237 @@ FarmTab:AddToggle({
             task.spawn(iniciarColeta)
         else
             pararColeta()
+        end
+    end
+})
+
+-- Variáveis para Coleta Remota de Lixos
+local coletaRemotaAtiva = false
+local coletaRemotaConnection
+local distanciaColeta = 100
+local delayEntreColetas = 0.1
+
+-- Função para coletar lixos à distância (sem mover o player)
+local function coletarLixosRemoto()
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
+        return
+    end
+    
+    local hrp = player.Character.HumanoidRootPart
+    local pastaLixos = workspace:FindFirstChild("MapaGeral")
+        and workspace.MapaGeral:FindFirstChild("Gari")
+        and workspace.MapaGeral.Gari:FindFirstChild("Lixos")
+    
+    if not pastaLixos then return end
+    
+    local lixosColetados = 0
+    
+    for _, lixo in ipairs(pastaLixos:GetChildren()) do
+        if not coletaRemotaAtiva then break end
+        
+        if lixo:IsA("BasePart") and string.find(string.upper(lixo.Name), "LEXOS") then
+            local prompt = lixo:FindFirstChildWhichIsA("ProximityPrompt")
+            local distancia = (lixo.Position - hrp.Position).Magnitude
+            
+            if prompt and prompt.Enabled and distancia <= distanciaColeta then
+                -- Coletar o lixo remotamente sem mover o player
+                task.spawn(function()
+                    pcall(function()
+                        fireproximityprompt(prompt)
+                        lixosColetados = lixosColetados + 1
+                    end)
+                end)
+                
+                task.wait(delayEntreColetas)
+            end
+        end
+    end
+    
+    return lixosColetados
+end
+
+-- Função para coleta massiva de lixos (todos de uma vez)
+local function coletarTodosLixosRemoto()
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
+        return
+    end
+    
+    local hrp = player.Character.HumanoidRootPart
+    local pastaLixos = workspace:FindFirstChild("MapaGeral")
+        and workspace.MapaGeral:FindFirstChild("Gari")
+        and workspace.MapaGeral.Gari:FindFirstChild("Lixos")
+    
+    if not pastaLixos then return end
+    
+    local lixosParaColetar = {}
+    
+    -- Primeiro, identificar todos os lixos válidos
+    for _, lixo in ipairs(pastaLixos:GetChildren()) do
+        if lixo:IsA("BasePart") and string.find(string.upper(lixo.Name), "LEXOS") then
+            local prompt = lixo:FindFirstChildWhichIsA("ProximityPrompt")
+            local distancia = (lixo.Position - hrp.Position).Magnitude
+            
+            if prompt and prompt.Enabled and distancia <= distanciaColeta then
+                table.insert(lixosParaColetar, {lixo = lixo, prompt = prompt})
+            end
+        end
+    end
+    
+    -- Coletar todos simultaneamente
+    for i, info in ipairs(lixosParaColetar) do
+        task.spawn(function()
+            pcall(function()
+                -- Pequeno delay escalonado para parecer mais natural
+                task.wait(i * 0.02)
+                fireproximityprompt(info.prompt)
+            end)
+        end)
+    end
+    
+    return #lixosParaColetar
+end
+
+-- Função para coleta em área específica
+local function coletarLixosEmArea(centro, raio)
+    local pastaLixos = workspace:FindFirstChild("MapaGeral")
+        and workspace.MapaGeral:FindFirstChild("Gari")
+        and workspace.MapaGeral.Gari:FindFirstChild("Lixos")
+    
+    if not pastaLixos then return 0 end
+    
+    local lixosColetados = 0
+    
+    for _, lixo in ipairs(pastaLixos:GetChildren()) do
+        if lixo:IsA("BasePart") and string.find(string.upper(lixo.Name), "LEXOS") then
+            local prompt = lixo:FindFirstChildWhichIsA("ProximityPrompt")
+            local distancia = (lixo.Position - centro).Magnitude
+            
+            if prompt and prompt.Enabled and distancia <= raio then
+                task.spawn(function()
+                    pcall(function()
+                        fireproximityprompt(prompt)
+                        lixosColetados = lixosColetados + 1
+                    end)
+                end)
+                
+                task.wait(0.05)
+            end
+        end
+    end
+    
+    return lixosColetados
+end
+
+-- Loop automático de coleta remota
+local function iniciarColetaRemota()
+    coletaRemotaAtiva = true
+    
+    task.spawn(function()
+        while coletaRemotaAtiva do
+            local coletados = coletarLixosRemoto()
+            if coletados and coletados > 0 then
+                -- Pequena pausa após coletar lixos
+                task.wait(1)
+            else
+                -- Pausa maior se não encontrou lixos
+                task.wait(3)
+            end
+        end
+    end)
+end
+
+local function pararColetaRemota()
+    coletaRemotaAtiva = false
+end
+
+-- Adicionar ao FarmTab
+FarmTab:AddSection({ "🎯 Coleta Remota de Lixos" })
+
+FarmTab:AddParagraph({ "Info:", "Coleta lixos à distância sem mover o personagem" })
+
+FarmTab:AddToggle({
+    Name = "Auto Coleta Remota",
+    Default = false,
+    Callback = function(state)
+        if state then
+            iniciarColetaRemota()
+        else
+            pararColetaRemota()
+        end
+    end
+})
+
+FarmTab:AddSlider({
+    Name = "Distância de Coleta",
+    Min = 20,
+    Max = 300,
+    Default = 100,
+    Callback = function(value)
+        distanciaColeta = value
+    end
+})
+
+FarmTab:AddSlider({
+    Name = "Delay entre Coletas (ms)",
+    Min = 50,
+    Max = 1000,
+    Default = 100,
+    Callback = function(value)
+        delayEntreColetas = value / 1000 -- Converter para segundos
+    end
+})
+
+FarmTab:AddButton({
+    Name = "Coletar Todos os Lixos Próximos",
+    Callback = function()
+        task.spawn(function()
+            local coletados = coletarTodosLixosRemoto()
+            -- Você pode adicionar uma notificação aqui se quiser
+            print("Lixos coletados:", coletados)
+        end)
+    end
+})
+
+FarmTab:AddButton({
+    Name = "Coleta Massiva (CUIDADO)",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local pastaLixos = workspace:FindFirstChild("MapaGeral")
+                    and workspace.MapaGeral:FindFirstChild("Gari")
+                    and workspace.MapaGeral.Gari:FindFirstChild("Lixos")
+                
+                if not pastaLixos then return end
+                
+                -- Coletar TODOS os lixos do mapa, independente da distância
+                for _, lixo in ipairs(pastaLixos:GetChildren()) do
+                    if lixo:IsA("BasePart") and string.find(string.upper(lixo.Name), "LEXOS") then
+                        local prompt = lixo:FindFirstChildWhichIsA("ProximityPrompt")
+                        
+                        if prompt and prompt.Enabled then
+                            task.spawn(function()
+                                pcall(function()
+                                    fireproximityprompt(prompt)
+                                end)
+                            end)
+                        end
+                    end
+                end
+            end)
+        end)
+    end
+})
+
+-- Coleta por área específica
+FarmTab:AddButton({
+    Name = "Coletar em Área Atual",
+    Callback = function()
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            task.spawn(function()
+                local coletados = coletarLixosEmArea(hrp.Position, 50)
+                print("Lixos coletados na área:", coletados)
+            end)
         end
     end
 })
