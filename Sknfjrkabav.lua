@@ -9,7 +9,7 @@ local Window = Libary:MakeWindow({
 })
 
 Window:AddMinimizeButton({
-    Button = { Image = "rbxassetid://128126421568053", BackgroundTransparency = 0 },
+    Button = { Image = "rbxassetid://128161889268721", BackgroundTransparency = 0 },
     Corner = { CornerRadius = UDim.new(35, 1) },
 })
 
@@ -35,174 +35,105 @@ InfoTab:AddButton({
 -- Aba Helper
 local HelperTab = Window:MakeTab({ Title = "Helper", Icon = "rbxassetid://112065172702553" })
 
--- Noclip com bypass avançado
+-- Noclip com bypass
 local noclipConnection
-local noclipParts = {}
-
-local function enableNoclip()
-    task.spawn(function()
-        local char = game.Players.LocalPlayer.Character
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    noclipParts[part] = part.CanCollide
-                    part.CanCollide = false
-                    
-                    -- Método adicional para alguns anti-cheats
-                    if part.Name ~= "HumanoidRootPart" then
-                        part.Transparency = math.min(part.Transparency + 0.1, 0.9)
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local function disableNoclip()
-    task.spawn(function()
-        local char = game.Players.LocalPlayer.Character
-        if char then
-            for part, originalState in pairs(noclipParts) do
-                if part and part.Parent then
-                    part.CanCollide = originalState
-                    -- Restaurar transparência
-                    if part.Name ~= "HumanoidRootPart" then
-                        part.Transparency = math.max(part.Transparency - 0.1, 0)
-                    end
-                end
-            end
-            noclipParts = {}
-        end
-    end)
-end
-
 HelperTab:AddToggle({
     Name = "Noclip",
     Default = false,
     Callback = function(state)
         if state then
-            noclipConnection = game:GetService("RunService").Stepped:Connect(function()
-                enableNoclip()
+            noclipConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                pcall(function()
+                    local char = game.Players.LocalPlayer.Character
+                    if char then
+                        for _, part in pairs(char:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = false
+                            end
+                        end
+                    end
+                end)
             end)
         else
             if noclipConnection then
                 noclipConnection:Disconnect()
                 noclipConnection = nil
             end
-            disableNoclip()
-        end
-    end
-})
-
--- Velocidade Configurável com bypass
-local normalWalkSpeed = 16
-local speedToggleState = false
-local speedSliderValue = 16
-local speedConnection
-
-local function setSpeed(speed)
-    task.spawn(function()
-        local char = game.Players.LocalPlayer.Character
-        if char then
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = speed
-                -- Método alternativo para alguns anti-cheats
-                if char:FindFirstChild("HumanoidRootPart") then
-                    char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            pcall(function()
+                local char = game.Players.LocalPlayer.Character
+                if char then
+                    for _, part in pairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                            part.CanCollide = true
+                        end
+                    end
                 end
-            end
+            end)
         end
-    end)
-end
+    end
+})
 
+-- Fly com bypass
+local flyConnection
+local flySpeed = 50
 HelperTab:AddToggle({
-    Name = "Speed",
+    Name = "Fly",
     Default = false,
     Callback = function(state)
-        speedToggleState = state
         if state then
-            speedConnection = game:GetService("RunService").Heartbeat:Connect(function()
-                setSpeed(speedSliderValue)
+            pcall(function()
+                local char = game.Players.LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local hrp = char.HumanoidRootPart
+                    local bg = Instance.new("BodyVelocity")
+                    bg.MaxForce = Vector3.new(4000, 4000, 4000)
+                    bg.Velocity = Vector3.new(0, 0, 0)
+                    bg.Parent = hrp
+                    
+                    flyConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                        pcall(function()
+                            local cam = workspace.CurrentCamera
+                            local moveVector = Vector3.new(0, 0, 0)
+                            
+                            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then
+                                moveVector = moveVector + cam.CFrame.LookVector
+                            end
+                            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then
+                                moveVector = moveVector - cam.CFrame.LookVector
+                            end
+                            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then
+                                moveVector = moveVector - cam.CFrame.RightVector
+                            end
+                            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then
+                                moveVector = moveVector + cam.CFrame.RightVector
+                            end
+                            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then
+                                moveVector = moveVector + Vector3.new(0, 1, 0)
+                            end
+                            if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift) then
+                                moveVector = moveVector - Vector3.new(0, 1, 0)
+                            end
+                            
+                            bg.Velocity = moveVector * flySpeed
+                        end)
+                    end)
+                end
             end)
         else
-            if speedConnection then
-                speedConnection:Disconnect()
-                speedConnection = nil
+            if flyConnection then
+                flyConnection:Disconnect()
+                flyConnection = nil
             end
-            setSpeed(normalWalkSpeed)
-        end
-    end
-})
-
-HelperTab:AddSlider({
-    Name = "Speed Amount",
-    Min = 16,
-    Max = 100,
-    Default = 16,
-    Float = 1,
-    Callback = function(value)
-        speedSliderValue = value
-        if speedToggleState then
-            local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = value
-            end
-        end
-    end
-})
-
--- Pulo Configurável com bypass
-local normalJumpPower = 50
-local jumpToggleState = false
-local jumpSliderValue = 50
-local jumpConnection
-
-local function setJump(power)
-    task.spawn(function()
-        local char = game.Players.LocalPlayer.Character
-        if char then
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.JumpPower = power
-                humanoid.JumpHeight = power / 2.5 -- Para alguns jogos que usam JumpHeight
-            end
-        end
-    end)
-end
-
-HelperTab:AddToggle({
-    Name = "Jump",
-    Default = false,
-    Callback = function(state)
-        jumpToggleState = state
-        if state then
-            jumpConnection = game:GetService("RunService").Heartbeat:Connect(function()
-                setJump(jumpSliderValue)
+            pcall(function()
+                local char = game.Players.LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    for _, obj in pairs(char.HumanoidRootPart:GetChildren()) do
+                        if obj:IsA("BodyVelocity") then
+                            obj:Destroy()
+                        end
+                    end
+                end
             end)
-        else
-            if jumpConnection then
-                jumpConnection:Disconnect()
-                jumpConnection = nil
-            end
-            setJump(normalJumpPower)
-        end
-    end
-})
-
-HelperTab:AddSlider({
-    Name = "Jump Amount",
-    Min = 50,
-    Max = 200,
-    Default = 50,
-    Float = 1,
-    Callback = function(value)
-        jumpSliderValue = value
-        if jumpToggleState then
-            local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.JumpPower = value
-            end
         end
     end
 })
@@ -377,7 +308,7 @@ local humanoid, hrp
 local coletando = false
 local originalSpeed = 16
 
--- Função para pegar o lixo mais próximo que esteja disponível
+-- Função para pegar o lixo mais próximo ou longe
 local function getLixoMaisProximo()
     local pastaLixos = workspace:FindFirstChild("MapaGeral")
         and workspace.MapaGeral:FindFirstChild("Gari")
@@ -385,106 +316,79 @@ local function getLixoMaisProximo()
     
     if not pastaLixos then return nil end
     
-    local maisProximo, menorDist = nil, math.huge
+    local lixosDisponiveis = {}
     for _, lixo in ipairs(pastaLixos:GetChildren()) do
         if lixo:IsA("BasePart") and string.find(string.upper(lixo.Name), "LEXOS") then
             local prompt = lixo:FindFirstChildWhichIsA("ProximityPrompt")
             if prompt and prompt.Enabled then
                 local dist = (lixo.Position - hrp.Position).Magnitude
-                if dist < menorDist then
-                    menorDist = dist
-                    maisProximo = lixo
-                end
+                table.insert(lixosDisponiveis, {lixo = lixo, distancia = dist})
             end
         end
     end
-    return maisProximo
+    
+    if #lixosDisponiveis == 0 then return nil end
+    
+    -- Ordenar por distância
+    table.sort(lixosDisponiveis, function(a, b) return a.distancia < b.distancia end)
+    
+    -- Pegar o mais próximo, ou se não tiver próximo (<50), pegar qualquer um
+    local maisProximo = lixosDisponiveis[1]
+    if maisProximo.distancia < 50 then
+        return maisProximo.lixo
+    else
+        -- Retornar qualquer lixo disponível (mesmo longe)
+        return lixosDisponiveis[math.random(1, #lixosDisponiveis)].lixo
+    end
 end
 
--- Caminhar até o lixo com movimento natural
+-- Caminhar até o lixo com bypass
 local function andarAte(lixo)
     if not humanoid or not hrp or not lixo or not lixo.Parent then return false end
     
-    local caminho = PathfindingService:CreatePath({
-        AgentRadius = 2,
-        AgentHeight = 5,
-        AgentCanJump = true,
-        WaypointSpacing = math.random(4, 8) -- Espaçamento variável
-    })
+    local targetPosition = lixo.Position
+    local maxDistance = (hrp.Position - targetPosition).Magnitude
     
-    local success, error = pcall(function()
-        caminho:ComputeAsync(hrp.Position, lixo.Position)
+    if maxDistance > 200 then return false end
+    
+    task.spawn(function()
+        pcall(function()
+            humanoid:MoveTo(targetPosition)
+        end)
     end)
     
-    if not success or caminho.Status ~= Enum.PathStatus.Success then
-        return false
-    end
-    
-    local waypoints = caminho:GetWaypoints()
-    for i, waypoint in ipairs(waypoints) do
-        if not coletando or not lixo.Parent then return false end
+    local startTime = tick()
+    while coletando and lixo.Parent do
+        local currentDistance = (hrp.Position - targetPosition).Magnitude
+        local timeElapsed = tick() - startTime
+        
+        if currentDistance < 8 or timeElapsed > 15 then break end
         
         local prompt = lixo:FindFirstChildWhichIsA("ProximityPrompt")
-        if not prompt or not prompt.Enabled then
-            return false
-        end
+        if not prompt or not prompt.Enabled then break end
         
-        humanoid:MoveTo(waypoint.Position)
-        if waypoint.Action == Enum.PathWaypointAction.Jump then
-            -- Delay natural antes do pulo
-            task.wait(math.random(10, 25) / 100)
-            humanoid.Jump = true
-        end
-        
-        local timeoutConnection
-        local moveFinished = false
-        
-        local connection = humanoid.MoveToFinished:Connect(function()
-            moveFinished = true
-        end)
-        
-        -- Timeout variável
-        timeoutConnection = task.delay(math.random(80, 150) / 100, function()
-            moveFinished = true
-        end)
-        
-        repeat 
-            task.wait(math.random(3, 8) / 100) 
-        until moveFinished
-        
-        connection:Disconnect()
-        if timeoutConnection then
-            task.cancel(timeoutConnection)
-        end
-        
-        -- Pequena pausa entre waypoints
-        if i < #waypoints then
-            task.wait(math.random(1, 5) / 100)
-        end
+        task.wait(0.1)
     end
-    return true
+    
+    return lixo.Parent ~= nil
 end
 
 -- Loop principal do farm com bypass
 local function iniciarColeta()
     coletando = true
-    -- Salvar velocidade original e aumentar gradualmente
-    humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
-    if humanoid then
-        originalSpeed = humanoid.WalkSpeed
-        -- Aumentar velocidade gradualmente para evitar detecção
-        task.spawn(function()
-            for i = originalSpeed, 35, 2 do
-                if not coletando then break end
-                humanoid.WalkSpeed = i
-                task.wait(0.1)
+    task.spawn(function()
+        pcall(function()
+            humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                originalSpeed = humanoid.WalkSpeed
+                humanoid.WalkSpeed = 35
             end
         end)
-    end
+    end)
     
     while coletando do
         if not player.Character then
-            task.wait(math.random(80, 120) / 100) -- Delay aleatório
+            task.wait(1)
             continue
         end
         
@@ -492,7 +396,7 @@ local function iniciarColeta()
         hrp = player.Character:FindFirstChild("HumanoidRootPart")
         
         if not humanoid or not hrp then
-            task.wait(math.random(40, 80) / 100)
+            task.wait(0.5)
             continue
         end
         
@@ -503,40 +407,30 @@ local function iniciarColeta()
                 local prompt = lixo:FindFirstChildWhichIsA("ProximityPrompt")
                 local distancia = (lixo.Position - hrp.Position).Magnitude
                 if prompt and prompt.Enabled and distancia <= prompt.MaxActivationDistance then
-                    -- Delay aleatório antes de coletar
-                    task.wait(math.random(5, 15) / 100)
-                    
-                    -- Método alternativo de ativação
                     task.spawn(function()
                         pcall(function()
                             fireproximityprompt(prompt)
                         end)
                     end)
-                    
-                    task.wait(math.random(8, 20) / 100)
+                    task.wait(0.2)
                 end
             end
         else
-            task.wait(math.random(15, 35) / 100)
+            task.wait(1) -- Esperar mais se não há lixo
         end
-        task.wait(math.random(3, 12) / 100) -- Delay variável entre ações
+        task.wait(0.1)
     end
 end
 
 local function pararColeta()
     coletando = false
-    -- Restaurar velocidade gradualmente
     task.spawn(function()
-        humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
-        if humanoid then
-            local currentSpeed = humanoid.WalkSpeed
-            for i = currentSpeed, originalSpeed, -2 do
-                humanoid.WalkSpeed = math.max(i, originalSpeed)
-                task.wait(0.1)
-                if i <= originalSpeed then break end
+        pcall(function()
+            humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = originalSpeed
             end
-            humanoid.WalkSpeed = originalSpeed
-        end
+        end)
     end)
 end
 
